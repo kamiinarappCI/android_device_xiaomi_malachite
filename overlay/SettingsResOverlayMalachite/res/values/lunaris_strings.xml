@@ -16,9 +16,9 @@
 -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="lunaris_device_message">Nothing Phone 2</string>
-    <string name="lunaris_processor_code_message">Snapdragon® 8+ Gen 1</string>
-    <string name="lunaris_battery_type_message">4700 mAh</string>
-    <string name="lunaris_screen_message">Amoled LTPO 120hz</string>
+    <string name="lunaris_device_message">24090RA29G (malachite)</string>
+    <string name="lunaris_processor_code_message">Mediatek Dimensity 7300-Ultra</string>
+    <string name="lunaris_battery_type_message">5110 mAh</string>
+    <string name="lunaris_screen_message">Amoled 120hz</string>
 </resources>
 
