@@ -18,8 +18,9 @@ inherits from. The device configuration consists of:
 - `manifests/evolution.xml` - the local manifest for their manifest
   (device, kernel-prebuilt, vendor, hardware/mediatek, hardware/xiaomi,
   sepolicy_vndr, vendor/mediatek/ims, hardware/dolby added;
-  external/wpa_supplicant_8 replaced with our fork; frameworks/native uses
-  our Evolution X branch described below).
+  external/wpa_supplicant_8 replaced with our fork; frameworks/base,
+  frameworks/native, Settings, Telephony and Bluetooth use our Evolution X
+  branches described below).
 - `lineage_malachite.mk` - the Evolution X options (EVO_BUILD_TYPE,
   WITH_GMS := true, TARGET_ENABLE_FP_OVERRIDE := false,
   TARGET_PROVIDES_FACE_UNLOCK_HAL := true, TARGET_BOOT_ANIMATION_RES := 1080).
@@ -54,18 +55,25 @@ never compiled)
   LineageOS: `breakfast malachite userdebug` produces ro.debuggable=0, the
   same release-by-default behaviour as our 24.0 builds.
 
-## What is deliberately not in this port
+## Framework features (since 2026-10-31)
 
-Our framework-side features do not exist here, because Evolution X's
-frameworks are their own forks and pointing those paths at our lineage forks
-would break Evolution X's features: three-finger screenshot,
-unrounded backlight, the FPSGO BufferQueue hooks, the eSIM
-settings UI, the LE Audio fixes, the brightness smoothing framework parts.
-Each needs its own Evolution X branch after the first build boots. Also
-missing for the same reason (2026-10-30): the Settings entry for the battery
-saver CPU cap (the device side works; persist.sys.battery_saver_cpu_cap can
-be set by hand) and the SystemUI fix for the black square around the
-fingerprint circle (frameworks/base fix/fod-canvas, clear the hardware canvas).
+Evolution X's frameworks are their own forks, so pointing those paths at our
+lineage forks would break Evolution X's features. Instead, base, Settings,
+Telephony and Bluetooth (like native above) use `feature/evolutionx-24.0`
+branches in our forks: Evolution X cnb plus every malachite commit of the
+lineage-24.0 fork, cherry-picked. That brings the unrounded backlight, timed
+brightness ramps, hwui and libgui FPSGO hooks, Dolby Vision HDR reporting,
+call volume index to the HAL, QS pulldown, the UDFPS canvas clear, no
+screenshot flash by default, the FaceSense challenge fix, the shared SIM /
+eUICC selection (Settings and TeleService), the refresh rate list fixes, the
+battery saver CPU limit and the LE Audio fixes. evolution.xml lists each.
+
+Left out because Evolution X already has its own: the three-finger screenshot
+(Evolution X's ThreeFingersSwipeListener and its gesture action setting),
+the market device name (Evolution X's SettingsProvider already uses
+ro.product.marketname) and the screenshot flash switch (taken from Evolution
+X in the first place). In Settings the CPU limit sits after Evolution X's
+battery saver refresh rate switch (order 91).
 
 Since 2026-10-30 this branch carries everything merged into lineage-24.0:
 MiFace (stock mifaced face HAL, replaces ParanoidSense), the keyguard-only
@@ -75,9 +83,10 @@ git only, so it works unchanged here).
 
 ## Before the first build
 
-Done on 2026-10-30: both feature/evolutionx-24.0 branches (device and
-frameworks/native) are pushed, and the Wi-Fi supplicant NAN fix (3be5c41) is
-in hardware/mediatek `lineage-24.0`, which evolution.xml references.
+Done: the Wi-Fi supplicant NAN fix (3be5c41) is in hardware/mediatek
+`lineage-24.0`, which evolution.xml references, and every
+feature/evolutionx-24.0 branch evolution.xml names (device, frameworks/base,
+frameworks/native, Settings, Telephony, Bluetooth) is pushed.
 
 ## Building (nothing here has run yet; treat every step as unproven)
 
