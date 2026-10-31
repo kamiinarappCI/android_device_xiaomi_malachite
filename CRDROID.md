@@ -9,7 +9,7 @@ used by crDroid's build tools. Stock mifaced supplies face unlock; the
 alternative crDroid face service is not selected.
 
 Use `manifests/crdroid.xml` with the crdroidandroid/android `17.0` manifest.
-The manifest selects the matching `feature/crdroid-17.0` branches in the
+The manifest selects the matching `crdroid-17.0` branches in the
 malachite-project forks, including the framework support commits ported
 onto crDroid. Publish those branches before using this manifest on another
 machine. They are currently local and unpushed.
