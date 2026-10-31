@@ -1,6 +1,7 @@
 # Evolution X on malachite (evolutionx-24.0)
 
-State of the Evolution X port, written 2026-10-29 when the branch was made.
+State of the Evolution X port: first written 2026-10-29, updated 2026-10-31 after the
+first release (Evolution X 12.3 with Google apps, built and signed that day).
 Read this before changing or building anything on this branch. The longer
 version, with references, is `notes/2026-10-29-evolutionx-port.md` in the
 workspace repository (E:\LineageOS-23.2-Malachite, local only).
@@ -39,8 +40,7 @@ The product name stays `lineage_malachite`; that follows Evolution X's own
 device trees (marble, rosemary), whose trees are unmodified LineageOS trees
 with a few variables added.
 
-## What was verified before the first build (all read in the sources,
-never compiled)
+## What was checked in the sources before the first build
 
 - Every repository `device.mk` and `BoardConfig.mk` needs exists in the cnb
   manifest (main + snippets): hardware/lineage/interfaces,
@@ -81,14 +81,11 @@ FOD touch gating, the camera platform_app_36 policy fix, the touch-rate
 event fix, libpowerhalwrap_vendor and the source ID (tools/source-id.sh reads
 git only, so it works unchanged here).
 
-## Before the first build
+## Building
 
-Done: the Wi-Fi supplicant NAN fix (3be5c41) is in hardware/mediatek
-`lineage-24.0`, which evolution.xml references, and every
-evolutionx-24.0 branch evolution.xml names (device, frameworks/base,
-frameworks/native, Settings, Telephony, Bluetooth) is pushed.
-
-## Building (nothing here has run yet; treat every step as unproven)
+The 2026-10-31 release was built this way (on a build server, with the release keys
+signing inline). Every evolutionx-24.0 branch evolution.xml names is published, and the
+Wi-Fi supplicant NAN fix is in hardware/mediatek `lineage-24.0`.
 
 ```
 mkdir -p ~/evox && cd ~/evox
@@ -120,20 +117,19 @@ mka -j$(nproc) --skip-soong-tests target-files-package otatools
   from the source root with the build environment sourced. Replace the two
   file names with the reference used by setup_inline_keys.sh and the new
   target-files zip. Stop if the command fails; do not package that output.
-  No signed EvoX output has been checked yet.
-- EvoX's vanilla build has no MindTheGapps dependency. Expected zip name:
-  EvolutionX-17.0-<date>-lineage_malachite-12.3-Vanilla-Unofficial.zip.
+- The build's version string is `EvolutionX-17.0-<date>-malachite-12.3-Unofficial`
+  (`-Vanilla` is added when WITH_GMS is false, which then also needs no MindTheGapps).
 - Google apps are baked in (WITH_GMS := true, vendor/gms). For a vanilla
   build set WITH_GMS := false.
 
-## What the first build will most likely surface
+## Build results
 
-- RRO/overlay mismatches against evo's Settings, Telephony and Wifi module
-  forks (SettingsResOverlayMalachite, TeleServiceResOverlayMalachite,
-  WifiOverlay, NetworkStackResMalachite): fix by adjusting the overlay, not
-  by pointing the manifest at our lineage forks.
-- Whatever evo changed in build/make that a LineageOS tree assumption
-  depends on. Read the error; do not disable the check that found it.
+- 2026-10-31: compiled at the first attempt and signed with the release keys; build ID
+  CP2A.260605.016. Overlays against Evolution X's Settings, Telephony and Wi-Fi forks
+  needed no changes.
+- If a later build fails on Evolution X changes in build/make or an overlay target,
+  fix the overlay or the device side; do not point the manifest at the lineage forks
+  and do not disable the check that found it.
 
 ## Decisions made (user may change)
 
