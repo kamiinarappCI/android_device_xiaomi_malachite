@@ -4,8 +4,9 @@ This branch prepares Android 17 device support on crDroid's `17.0` sources.
 It starts from the completed LOS24 device stack of 2026-10-28 and keeps
 the stock kernel, firmware blobs and restricted source ID.
 
-`crdroid_malachite.mk` registers the `lineage_malachite` product, the prefix
-used by crDroid's build tools. Stock mifaced supplies face unlock; the
+`lineage_malachite.mk` registers the `lineage_malachite` product, the prefix
+used by crDroid's build tools; the file keeps that name because the build
+finds a product's makefile by its PRODUCT_NAME. Stock mifaced supplies face unlock; the
 alternative crDroid face service is not selected.
 
 Use `manifests/crdroid.xml` with the crdroidandroid/android `17.0` manifest.
