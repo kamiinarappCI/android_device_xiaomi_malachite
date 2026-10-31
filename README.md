@@ -1,19 +1,23 @@
 # Evolution X for the Redmi Note 14 Pro 5G / POCO X7 5G (malachite)
 
-Device tree for an unofficial Evolution X (Android 17) build for malachite,
-ported from LineageOS 24.0. Not built or tested on a phone yet.
+Device tree for an unofficial Evolution X 12.3 (Android 17) build for malachite,
+kept level with LineageOS 24.0 (`lineage-24.0`). First release: 2026-10-31.
 
 **Downloads, updates and support:** [Telegram group](https://t.me/malachite_project)
 
-## Branch
+## Branches
 
-`evolutionx-24.0` is the Evolution X branch in this device tree and
-the [malachite-project](https://github.com/malachite-project) frameworks/base,
-frameworks/native, Settings, Telephony and Bluetooth forks. Other dependencies
-use `lineage-24.0`. See [EVOLUTION.md](EVOLUTION.md)
-for the port state and remaining prerequisites. `lineage-23.2` (Android 16) stays as it was;
-[bringup/LINEAGE-24.md](bringup/LINEAGE-24.md) lists what moving each fork to
-24.0 changed.
+| Branch | ROM | Notes |
+| --- | --- | --- |
+| `lineage-24.0` | LineageOS 24.0 (Android 17) | The main line, in this repository and in every other [malachite-project](https://github.com/malachite-project) fork. Base your work on it. |
+| `crdroid-17.0` | crDroid 13.0 (Android 17) | Kept level with `lineage-24.0`; see [CRDROID.md](https://github.com/malachite-project/android_device_xiaomi_malachite/blob/crdroid-17.0/CRDROID.md). |
+| `evolutionx-24.0` | Evolution X 12.3 (Android 17) | Kept level with `lineage-24.0`; see [EVOLUTION.md](https://github.com/malachite-project/android_device_xiaomi_malachite/blob/evolutionx-24.0/EVOLUTION.md). |
+
+Every fix on `lineage-24.0` also goes to both ROM branches: merged in the device,
+vendor and hardware repositories, cherry-picked onto each ROM's own framework forks.
+`lineage-23.2` (Android 16) is retired and no longer published;
+[bringup/LINEAGE-24.md](bringup/LINEAGE-24.md) lists what moving each fork to 24.0
+changed.
 
 ## Building
 
