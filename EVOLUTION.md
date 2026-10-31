@@ -1,4 +1,4 @@
-# Evolution X on malachite (feature/evolutionx-24.0)
+# Evolution X on malachite (evolutionx-24.0)
 
 State of the Evolution X port, written 2026-10-29 when the branch was made.
 Read this before changing or building anything on this branch. The longer
@@ -26,7 +26,7 @@ inherits from. The device configuration consists of:
   TARGET_PROVIDES_FACE_UNLOCK_HAL := true, TARGET_BOOT_ANIMATION_RES := 1080).
   It also inherits the existing local inline-signing configuration.
 
-`android_frameworks_native`, branch `feature/evolutionx-24.0`, starts at
+`android_frameworks_native`, branch `evolutionx-24.0`, starts at
 Evolution X cnb `cc9996b` and replaces its GED KPI implementation with the
 safe implementation from our lineage-24.0 commit `a469d75` (native fix
 `2bcc679`). GED stays enabled,
@@ -59,7 +59,7 @@ never compiled)
 
 Evolution X's frameworks are their own forks, so pointing those paths at our
 lineage forks would break Evolution X's features. Instead, base, Settings,
-Telephony and Bluetooth (like native above) use `feature/evolutionx-24.0`
+Telephony and Bluetooth (like native above) use `evolutionx-24.0`
 branches in our forks: Evolution X cnb plus every malachite commit of the
 lineage-24.0 fork, cherry-picked. That brings the unrounded backlight, timed
 brightness ramps, hwui and libgui FPSGO hooks, Dolby Vision HDR reporting,
@@ -85,7 +85,7 @@ git only, so it works unchanged here).
 
 Done: the Wi-Fi supplicant NAN fix (3be5c41) is in hardware/mediatek
 `lineage-24.0`, which evolution.xml references, and every
-feature/evolutionx-24.0 branch evolution.xml names (device, frameworks/base,
+evolutionx-24.0 branch evolution.xml names (device, frameworks/base,
 frameworks/native, Settings, Telephony, Bluetooth) is pushed.
 
 ## Building (nothing here has run yet; treat every step as unproven)
@@ -95,7 +95,7 @@ mkdir -p ~/evox && cd ~/evox
 repo init -u https://github.com/Evolution-X/manifest.git -b cnb --git-lfs
 mkdir -p .repo/local_manifests
 curl -o .repo/local_manifests/evolution.xml \
-  https://raw.githubusercontent.com/malachite-project/android_device_xiaomi_malachite/feature/evolutionx-24.0/manifests/evolution.xml
+  https://raw.githubusercontent.com/malachite-project/android_device_xiaomi_malachite/evolutionx-24.0/manifests/evolution.xml
 repo sync -c -j4 --no-tags --no-clone-bundle
 TOP="$PWD" bash /mnt/e/LineageOS-23.2-Malachite/tools/setup_inline_keys.sh || exit 1
 source build/envsetup.sh
@@ -140,5 +140,5 @@ mka -j$(nproc) --skip-soong-tests target-files-package otatools
 - Google apps baked in (WITH_GMS := true); lineage-24.0 stays the Google-free ROM.
 - Stock Xiaomi fingerprint kept; evo's Pixel fingerprint spoof off
   (TARGET_ENABLE_FP_OVERRIDE := false).
-- Branch name: feature/evolutionx-24.0 (project convention: -24.0 suffix for
-  the Android 17 line).
+- Branch name: evolutionx-24.0, a ROM line like lineage-24.0 rather than a
+  feature branch (-24.0 suffix for the Android 17 line).
