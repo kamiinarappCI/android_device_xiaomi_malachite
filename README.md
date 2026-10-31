@@ -1,6 +1,7 @@
-# LineageOS 24.0 for the Redmi Note 14 Pro 5G / POCO X7 5G (malachite)
+# crDroid for the Redmi Note 14 Pro 5G / POCO X7 5G (malachite)
 
-Device tree for an unofficial LineageOS 24.0 (Android 17) build for malachite.
+Device tree for an unofficial crDroid 13.0 (Android 17) build for malachite,
+kept level with LineageOS 24.0 (`lineage-24.0`). First release: 2026-10-31.
 
 **Downloads, updates and support:** [Telegram group](https://t.me/malachite_project)
 
@@ -20,14 +21,14 @@ changed.
 
 ## Building
 
-See [BUILDING.md](BUILDING.md) for building ROMs from these trees (forking, staying in
-sync, source ID) and [AGENTS.md](AGENTS.md) for the working rules.
+See [CRDROID.md](CRDROID.md) for the crDroid build notes,
+[BUILDING.md](BUILDING.md) for general fork maintenance, and [AGENTS.md](AGENTS.md)
+for the working rules.
 
-`manifests/malachite.xml` is the local manifest for the whole tree: set up a
-LineageOS 24.0 checkout, copy it to `.repo/local_manifests/`, sync, then
-`breakfast malachite`. The comment at its top lists what each fork changes. The
-crDroid and Evolution X branches carry their own local manifests
-(`manifests/crdroid.xml`, `manifests/evolution.xml`) for those ROMs' sources.
+`manifests/crdroid.xml` is the local manifest for this branch: set up a crDroid
+`17.0` checkout (crdroidandroid/android), copy it to `.repo/local_manifests/`, sync,
+then `breakfast malachite`. Do not also install malachite.xml, which selects the
+LineageOS framework forks.
 Kernel sources are built separately; see
 [kernel_manifest-6.1](https://github.com/malachite-project/kernel_manifest-6.1).
 
