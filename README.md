@@ -7,9 +7,10 @@ ported from LineageOS 24.0. Not built or tested on a phone yet.
 
 ## Branch
 
-`feature/evolutionx-24.0` is the Evolution X branch in this device tree and
-the [malachite-project](https://github.com/malachite-project) frameworks/native
-fork. Other dependencies use `lineage-24.0`. See [EVOLUTION.md](EVOLUTION.md)
+`evolutionx-24.0` is the Evolution X branch in this device tree and
+the [malachite-project](https://github.com/malachite-project) frameworks/base,
+frameworks/native, Settings, Telephony and Bluetooth forks. Other dependencies
+use `lineage-24.0`. See [EVOLUTION.md](EVOLUTION.md)
 for the port state and remaining prerequisites. `lineage-23.2` (Android 16) stays as it was;
 [bringup/LINEAGE-24.md](bringup/LINEAGE-24.md) lists what moving each fork to
 24.0 changed.
