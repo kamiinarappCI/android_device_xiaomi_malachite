@@ -10,24 +10,32 @@
 
      Evolution X mounts its own vendor tree at vendor/lineage and carries
      its own forks of frameworks/base, frameworks/native, Settings,
-     Telephony and Bluetooth. Only frameworks/native is overridden here,
-     with an Evolution X branch carrying the safe GED KPI implementation.
-     It keeps GED state outside Surface, preserving its public layout.
-     The other framework forks stay Evolution X's. The framework-side
-     malachite features of lineage-24.0 (three-finger screenshot, unrounded
-     backlight, FPSGO hooks, the eSIM settings UI, the LE Audio fixes) are
-     not in this port. Porting them is its own work after the first
-     Evolution X build boots; pointing these paths at our lineage forks
-     instead would break Evolution X's own features.
+     Telephony and Bluetooth. Those five are overridden here with
+     feature/evolutionx-24.0 branches: Evolution X cnb plus the malachite
+     commits of our lineage-24.0 forks, so Evolution X's own features stay.
+     Left out because Evolution X already has its own version: the
+     three-finger screenshot (its ThreeFingersSwipeListener), the market
+     device name and the screenshot flash switch.
 
-     The device and frameworks/native trees use feature/evolutionx-24.0.
-     Every other fork stays on lineage-24.0. These carry changes on top
-     of their source:
+     The device tree and those five use feature/evolutionx-24.0. Every
+     other fork stays on lineage-24.0. These carry changes on top of their
+     source:
        device tree         the Evolution X port: this manifest and the
                            Evolution X options in lineage_malachite.mk,
                            on top of lineage-24.0
        frameworks/native   Evolution X cnb + the layout-safe GED KPI
-                           implementation from our lineage-24.0 fork
+                           implementation (GED state outside Surface),
+                           Dolby Vision HDR reporting, FPSGO hooks and
+                           the BnProducerListener detach ABI symbol
+       frameworks/base     Evolution X cnb + unrounded backlight, timed
+                           brightness ramps, hwui FPSGO hooks, call volume
+                           index to the HAL, QS pulldown, UDFPS canvas
+                           clear, no screenshot flash by default, FaceSense
+                           challenge fix
+       Settings            Evolution X cnb + shared SIM / eUICC selection,
+                           refresh rate list fixes, battery saver CPU limit
+       Telephony           Evolution X cnb + shared SIM / eUICC selection
+       Bluetooth           Evolution X cnb + the LE Audio fixes
        wpa_supplicant_8    current LineageOS + CONFIG_DISABLE_WPA_VERSION_3
                            (the shipped MTK driver ignores WPA3; the
                            framework switch is off by default) + the
@@ -36,12 +44,8 @@
        hardware/mediatek   current LineageOS + chara's Codec2 AIDL
                            service, memtrack hardening and the MediaTek
                            wpa_supplicant driver-command library
-                           (lib_driver_cmd_mt66xx). Needs the
-                           wpa_supplicant NAN struct fix
-                           (fix/wifi-supplicant-nan-24.0, 3be5c41)
-                           merged into lineage-24.0 first, or
-                           wpa_supplicant crashes on every start and
-                           Wi-Fi is dead (the 2026-10-27 24.0 bug).
+                           (lib_driver_cmd_mt66xx), with the
+                           wpa_supplicant NAN struct fix (3be5c41)
        hardware/xiaomi     current LineageOS + chara's malachite eUICC,
                            mtdservice, fingerprint and sensor fixes
        sepolicy_vndr       current LineageOS + chara's six MT6878 labels
@@ -80,9 +84,17 @@
   <remove-project path="hardware/dolby" optional="true" />
   <project path="hardware/dolby" name="android_hardware_dolby" remote="malachite-project" revision="lineage-24.0" />
 
-  <!-- Overrides of LineageOS's supplicant and Evolution X's native tree -->
+  <!-- Overrides of LineageOS's supplicant and Evolution X's framework forks -->
   <remove-project path="external/wpa_supplicant_8" optional="true" />
   <project path="external/wpa_supplicant_8" name="android_external_wpa_supplicant_8" remote="malachite-project" revision="lineage-24.0" />
+  <remove-project path="frameworks/base" optional="true" />
+  <project path="frameworks/base" name="android_frameworks_base" remote="malachite-project" revision="feature/evolutionx-24.0" groups="pdk-cw-fs,pdk-fs,sysui-studio" />
   <remove-project path="frameworks/native" optional="true" />
   <project path="frameworks/native" name="android_frameworks_native" remote="malachite-project" revision="feature/evolutionx-24.0" groups="pdk" />
+  <remove-project path="packages/apps/Settings" optional="true" />
+  <project path="packages/apps/Settings" name="android_packages_apps_Settings" remote="malachite-project" revision="feature/evolutionx-24.0" groups="pdk-fs,pdk-cw-tvc,sysui-studio" />
+  <remove-project path="packages/services/Telephony" optional="true" />
+  <project path="packages/services/Telephony" name="android_packages_services_Telephony" remote="malachite-project" revision="feature/evolutionx-24.0" groups="pdk-cw-fs,pdk-fs" />
+  <remove-project path="packages/modules/Bluetooth" optional="true" />
+  <project path="packages/modules/Bluetooth" name="android_packages_modules_Bluetooth" remote="malachite-project" revision="feature/evolutionx-24.0" groups="pdk" />
 </manifest>
