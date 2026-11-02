@@ -571,3 +571,12 @@ endif
 
 # Inherit the proprietary files
 $(call inherit-product, vendor/xiaomi/malachite/malachite-vendor.mk)
+
+# Set maintainer
+MISTOS_MAINTAINER := kamiinarappCI
+
+# Enable GMS with mini package
+WITH_GMS := true
+
+# Enable UI enhancements
+TARGET_ENABLE_BLUR := true
