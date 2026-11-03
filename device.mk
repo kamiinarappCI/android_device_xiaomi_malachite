@@ -576,7 +576,7 @@ $(call inherit-product, vendor/xiaomi/malachite/malachite-vendor.mk)
 MISTOS_MAINTAINER := kamiinarappCI
 
 # Enable GMS with mini package
-WITH_GMS := true
+WITH_GMS := false
 
 # Enable UI enhancements
 TARGET_ENABLE_BLUR := true
