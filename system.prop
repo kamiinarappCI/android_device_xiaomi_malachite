@@ -17,13 +17,3 @@ persist.bluetooth.a2dp_offload.coex_buf_count=3
 # WiFi
 wifi.interface=wlan0
 wifi.supplicant_scan_interval=120
-
-# mistos prop
-ro.mist.display=1220 x 2712, 120 hz
-ro.mist.battery=5110mAh
-ro.mist.soc=Mediatek Dimenshity 7300-Ultra
-ro.mist.camera=200/50MP + 8MP + 2MP
-ro.mist.front=20MP
-ro.mist.platform=MT6878
-ro.mist.screen=6.67’ Amoled 
-ro.mist.device.name=Malachite
