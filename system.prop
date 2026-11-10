@@ -17,3 +17,10 @@ persist.bluetooth.a2dp_offload.coex_buf_count=3
 # WiFi
 wifi.interface=wlan0
 wifi.supplicant_scan_interval=120
+
+ro.product.marketname=Malachite
+ro.infinity.soc=Meditek Dimensity 7300-Ultra
+ro.infinity.camera=200/50MP + 8MP + 2MP
+ro.infinity.battery=5110 mAh
+ro.infinity.display=1220 x 2712 AMOLED, 120Hz
+ro.infinity.device=MT6878
