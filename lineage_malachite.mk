@@ -30,3 +30,12 @@ PRODUCT_BUILD_PROP_OVERRIDES += \
     DeviceProduct=$(PRODUCT_SYSTEM_NAME)
 
 PRODUCT_GMS_CLIENTID_BASE := android-xiaomi
+
+# Maintainer Name
+INFINITY_MAINTAINER := kamiinarappCI
+
+# Whether the device supports Fingerprint On Display
+TARGET_HAS_UDFPS := true
+
+# Whether Including Google Apps
+WITH_GAPPS := true
