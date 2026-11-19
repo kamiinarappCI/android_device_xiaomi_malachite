@@ -1,0 +1,6 @@
+id=malachite_miface
+name=malachite: Xiaomi face unlock (stock mifaced)
+version=1.0
+versionCode=1
+author=noamtu123
+description=Replaces ParanoidSense with stock HyperOS face unlock on LineageOS 23.2 malachite: Xiaomi's face HAL (mifaced) on the front camera, faces stored in the TEE. Delete your ParanoidSense face before installing. Action button: status. Remove the module and reboot to go back to ParanoidSense.

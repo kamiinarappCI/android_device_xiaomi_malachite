@@ -1,0 +1,4 @@
+# The ROM ships Google's Pixel policy (100), under which lmkd treats swap as
+# always low and closes cached apps early. Stock Xiaomi malachite uses 20:
+# kills for low swap start only when less than 20% of zram is free.
+ro.lmk.swap_free_low_percentage=20

@@ -1,0 +1,5 @@
+# frameworks/base registers its ParanoidSense provider only when this is true;
+# false makes FaceService use the AIDL face HAL (mifaced) instead.
+ro.face.sense_service=false
+# Stock vendor value: mifaced keeps its camera pipeline ready for a faster start.
+persist.vendor.mifaced.fastlaunch=1

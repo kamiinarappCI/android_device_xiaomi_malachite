@@ -1,0 +1,87 @@
+From 80723d8f664b1e492c2a3e2fc52591118cda6c80 Mon Sep 17 00:00:00 2001
+From: Noam <noamtu123@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 00:34:54 +0200
+Subject: [PATCH] malachite: camera: preserve MiCamera vendor stream sizes
+
+CameraDeviceClient reads persist.vendor.camera.privapp.list before stream
+configuration. Without the allowlist, the 16320x12240 JPEG reader on
+camera 5 is rounded to 1920x1440 by ROUNDING_WIDTH_CAP. The camera dump
+records the reader name and the rounded stream dimensions together.
+
+Register MiCamera and label this property separately so cameraserver and
+the platform-signed app's Camera2 code can read it without exposing the
+internal camera property group. This also retains the existing privileged
+JPEG buffer sizing and input stream compatibility paths.
+---
+ sepolicy/vendor/cameraserver.te   | 7 +++++++
+ sepolicy/vendor/platform_app.te   | 3 +++
+ sepolicy/vendor/property.te       | 7 +++++++
+ sepolicy/vendor/property_contexts | 2 ++
+ vendor.prop                       | 1 +
+ 5 files changed, 20 insertions(+)
+ create mode 100644 sepolicy/vendor/cameraserver.te
+ create mode 100644 sepolicy/vendor/property.te
+
+diff --git a/sepolicy/vendor/cameraserver.te b/sepolicy/vendor/cameraserver.te
+new file mode 100644
+index 0000000..324d775
+--- /dev/null
++++ b/sepolicy/vendor/cameraserver.te
+@@ -0,0 +1,7 @@
++#
++# SPDX-FileCopyrightText: The LineageOS Project
++# SPDX-License-Identifier: Apache-2.0
++#
++
++# The privileged-client list controls vendor camera stream configuration.
++get_prop(cameraserver, vendor_camera_privapp_list_prop)
+diff --git a/sepolicy/vendor/platform_app.te b/sepolicy/vendor/platform_app.te
+index 4850428..9b1a879 100644
+--- a/sepolicy/vendor/platform_app.te
++++ b/sepolicy/vendor/platform_app.te
+@@ -5,3 +5,6 @@ binder_call(hal_aidlbgservice, platform_app)
+ binder_call(platform_app, hal_fingerprint_default)
+ 
+ allow platform_app vendor_hal_fingerprint_service_xiaomi:service_manager find;
++
++# Camera2 checks the vendor stream allowlist in the platform-signed camera app.
++get_prop(platform_app, vendor_camera_privapp_list_prop)
+diff --git a/sepolicy/vendor/property.te b/sepolicy/vendor/property.te
+new file mode 100644
+index 0000000..c957cbb
+--- /dev/null
++++ b/sepolicy/vendor/property.te
+@@ -0,0 +1,7 @@
++#
++# SPDX-FileCopyrightText: The LineageOS Project
++# SPDX-License-Identifier: Apache-2.0
++#
++
++# Read by Camera2 and cameraserver to preserve MiCamera's vendor stream sizes.
++vendor_restricted_prop(vendor_camera_privapp_list_prop)
+diff --git a/sepolicy/vendor/property_contexts b/sepolicy/vendor/property_contexts
+index 8a2b270..22bbc18 100644
+--- a/sepolicy/vendor/property_contexts
++++ b/sepolicy/vendor/property_contexts
+@@ -1,4 +1,6 @@
+ # Camera
++# MiCamera needs vendor stream sizes that are absent from the standard size table.
++persist.vendor.camera.privapp.list u:object_r:vendor_camera_privapp_list_prop:s0 exact string
+ persist.vendor.camera. u:object_r:vendor_camera_persist_prop:s0
+ persist.vendor.XDRVersion  u:object_r:vendor_camera_persist_prop:s0
+ vendor.camera. u:object_r:vendor_camera_prop:s0
+diff --git a/vendor.prop b/vendor.prop
+index ea79436..1ce3f58 100644
+--- a/vendor.prop
++++ b/vendor.prop
+@@ -91,6 +91,7 @@ bluetooth.profile.vcp.controller.enabled=true
+ 
+ # Camera
+ camera.disable_zsl_mode=1
++persist.vendor.camera.privapp.list=com.android.camera
+ persist.vendor.camera3.pipeline.bufnum.base.imgo=4
+ persist.vendor.camera3.pipeline.bufnum.base.lcso=4
+ persist.vendor.camera3.pipeline.bufnum.base.rrzo=4
+-- 
+2.43.0
+

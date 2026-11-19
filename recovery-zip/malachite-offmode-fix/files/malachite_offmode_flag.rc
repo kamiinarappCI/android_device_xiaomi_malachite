@@ -1,0 +1,41 @@
+# Off-mode charging test fix (recovery zip, build 20261009).
+# /product/bin/malachite_offmode_flag.sh writes power_off_mode = 1 to the
+# charger partition: when the charging screen starts (that start has used the
+# flag up), and when Android powers off. Product's init files are read after
+# vendor's, so these actions run after the ROM's own ones for the same trigger.
+
+service malachite.offmode_charger /product/bin/malachite_offmode_flag.sh charger
+    user root
+    group root
+    oneshot
+    disabled
+
+service malachite.offmode_poweroff /product/bin/malachite_offmode_flag.sh poweroff
+    user root
+    group root
+    oneshot
+    disabled
+
+# The ROM's polling re-arm script is no longer needed; stop it before it
+# touches the sysfs node.
+on charger
+    start malachite.offmode_charger
+    stop vendor.offmode_charge
+
+on property:sys.shutdown.requested=0
+    exec_start malachite.offmode_poweroff
+
+on property:sys.shutdown.requested=0userrequested
+    exec_start malachite.offmode_poweroff
+
+on property:sys.shutdown.requested=0battery
+    exec_start malachite.offmode_poweroff
+
+on property:sys.shutdown.requested=0thermal
+    exec_start malachite.offmode_poweroff
+
+on property:sys.shutdown.requested=0thermal,battery
+    exec_start malachite.offmode_poweroff
+
+on property:sys.shutdown.requested=0service
+    exec_start malachite.offmode_poweroff

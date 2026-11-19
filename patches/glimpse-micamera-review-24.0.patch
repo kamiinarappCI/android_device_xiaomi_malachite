@@ -1,0 +1,48 @@
+From 17b7e35ef2151fa27d73b2044675b2c45e40d788 Mon Sep 17 00:00:00 2001
+From: Noam <noamtu123@users.noreply.github.com>
+Date: Fri, 6 Nov 2026 09:32:21 +0200
+Subject: [PATCH] Glimpse: show the album when MiCamera opens its last shot
+
+Tapping MiCamera's thumbnail showed one photo with no swiping. MiCamera wants
+Xiaomi's gallery, then falls back to ACTION_VIEW with StartActivityWhenLocked.
+Treat that as a review when the phone is unlocked.
+---
+ .../glimpse/viewmodels/IntentsViewModel.kt        | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/app/src/main/java/org/lineageos/glimpse/viewmodels/IntentsViewModel.kt b/app/src/main/java/org/lineageos/glimpse/viewmodels/IntentsViewModel.kt
+index b529e14..c4469ef 100644
+--- a/app/src/main/java/org/lineageos/glimpse/viewmodels/IntentsViewModel.kt
++++ b/app/src/main/java/org/lineageos/glimpse/viewmodels/IntentsViewModel.kt
+@@ -172,7 +172,19 @@ class IntentsViewModel(application: Application) : GlimpseViewModel(application)
+                 }
+             }
+ 
+-            when (intent.action) {
++            // MiCamera asks for Xiaomi's gallery first, then falls back to a plain view of its
++            // last shot. The extra is false unless the phone is locked, so a review shows the
++            // whole album and the locked case stays on the one photo.
++            val action = when {
++                intent.action == Intent.ACTION_VIEW &&
++                        intent.hasExtra(EXTRA_START_WHEN_LOCKED) &&
++                        !intent.getBooleanExtra(EXTRA_START_WHEN_LOCKED, true) ->
++                    MediaStore.ACTION_REVIEW
++
++                else -> intent.action
++            }
++
++            when (action) {
+                 null,
+                 Intent.ACTION_MAIN -> ParsedIntent.MainIntent()
+ 
+@@ -458,6 +470,7 @@ class IntentsViewModel(application: Application) : GlimpseViewModel(application)
+     }
+ 
+     companion object {
++        private const val EXTRA_START_WHEN_LOCKED = "StartActivityWhenLocked"
+         private val LOG_TAG = IntentsViewModel::class.simpleName!!
+     }
+ }
+-- 
+2.43.0
+

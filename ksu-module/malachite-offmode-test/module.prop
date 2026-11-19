@@ -1,0 +1,6 @@
+id=malachite_offmode_test
+name=malachite off-mode charging test
+version=1.0
+versionCode=1
+author=noamtu123
+description=Tests whether the bootloader keeps the phone off and charging after a restart into its charging mode. When a cable starts a switched-off phone into Android, this restarts it once into charging mode (kpoc, then charger if kpoc fails). The Action button runs the same test right away (cable needed). Results: Download/malachite_offmode_test.txt. Remove the module to stop.

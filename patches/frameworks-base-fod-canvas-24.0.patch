@@ -1,0 +1,40 @@
+From b385d3f940d8adb3fa93b76c1c51d37c8a18d44c Mon Sep 17 00:00:00 2001
+From: Noam <noamtu123@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 00:40:08 +0200
+Subject: [PATCH] SystemUI: clear the UDFPS hardware canvas before drawing
+
+lockHardwareCanvas requires full surface coverage on every frame. The
+transparent pressed drawable and sensor oval leave the rest unpainted,
+which can show a black rectangle around the illumination dot.
+
+Clear the complete canvas with transparent CLEAR before drawing. Keep
+the hardware canvas used to compose landscape fingerprint illumination.
+---
+ .../src/com/android/systemui/biometrics/UdfpsSurfaceView.java  | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
+index 6055b1743917..dbad3e13d1a8 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
+@@ -21,7 +21,9 @@ import android.annotation.Nullable;
+ import android.content.Context;
+ import android.graphics.drawable.Drawable;
+ import android.graphics.Canvas;
++import android.graphics.Color;
+ import android.graphics.Paint;
++import android.graphics.PorterDuff;
+ import android.graphics.PixelFormat;
+ import android.graphics.RectF;
+ import android.util.AttributeSet;
+@@ -141,6 +143,7 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+         Canvas canvas = null;
+         try {
+             canvas = mHolder.lockHardwareCanvas();
++            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+             mUdfpsIconPressed.setBounds(
+                     Math.round(sensorRect.left),
+                     Math.round(sensorRect.top),
+-- 
+2.43.0
+

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <!-- Enable WPA2 to WPA3 auto-upgrade.
+         Disabled on malachite: the vendor Wi-Fi driver cannot decode the
+         nl80211 WPA3 version bit, so selecting SAE on a transition-mode AP
+         makes association fail outright. -->
+    <bool translatable="false" name="config_wifiSaeUpgradeEnabled">false</bool>
+</resources>

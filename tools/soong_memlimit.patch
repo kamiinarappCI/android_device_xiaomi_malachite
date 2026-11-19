@@ -1,0 +1,16 @@
+diff --git a/ui/build/soong.go b/ui/build/soong.go
+index 4521b4abe..9e92964f9 100644
+--- a/ui/build/soong.go
++++ b/ui/build/soong.go
+@@ -215,6 +215,11 @@ func (pb PrimaryBuilderFactory) primaryBuilderInvocation(config Config) bootstra
+ 
+ 	commonArgs = append(commonArgs, "-l", filepath.Join(pb.config.FileListDir(), "Android.bp.list"))
+ 	invocationEnv := make(map[string]string)
++	// The rule runs soong_build under "env -i", so a GOMEMLIMIT in the caller's
++	// environment never reaches it.
++	if limit := os.Getenv("MALACHITE_SOONG_MEMLIMIT"); limit != "" {
++		invocationEnv["GOMEMLIMIT"] = limit
++	}
+ 	if pb.debugPort != "" {
+ 		//debug mode
+ 		commonArgs = append(commonArgs, "--delve_listen", pb.debugPort,

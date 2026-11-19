@@ -1,0 +1,6 @@
+id=malachite_offmode_flag
+name=malachite off-mode charging fix (test)
+version=1.2
+versionCode=3
+author=noamtu123
+description=Keeps Xiaomi's power_off_mode flag at 1 while Android runs, so a cable plugged into a switched-off phone shows the charging screen. Logs every start: FAIL if the cable started Android, what the bootloader saw. Action button: status + copies the log to Download/malachite_offmode.txt.

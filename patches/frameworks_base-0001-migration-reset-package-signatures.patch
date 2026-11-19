@@ -1,0 +1,70 @@
+From 146d38eea5b583d691f73ad33e27583919f896d7 Mon Sep 17 00:00:00 2001
+From: Sam Mortimer <sam@mortimer.me.uk>
+Date: Tue, 10 Jan 2017 22:21:45 -0800
+Subject: [PATCH] Reset all package signatures on boot
+
+Can be used to make a special build that resets all
+package signatures without wiping any data.
+
+Change-Id: Iff65f2ed3c9d0f80be7221ff90803eda4732cac0
+---
+
+diff --git a/services/core/java/com/android/server/pm/InstallPackageHelper.java b/services/core/java/com/android/server/pm/InstallPackageHelper.java
+index 3d25f8f..bbfd4db 100644
+--- a/services/core/java/com/android/server/pm/InstallPackageHelper.java
++++ b/services/core/java/com/android/server/pm/InstallPackageHelper.java
+@@ -1760,7 +1760,14 @@
+                 final KeySetManagerService ksms = mPm.mSettings.getKeySetManagerService();
+                 final SharedUserSetting signatureCheckSus = mPm.mSettings.getSharedUserSettingLPr(
+                         signatureCheckPs);
+-                if (ksms.shouldCheckUpgradeKeySetLocked(signatureCheckPs, signatureCheckSus,
++                if (mPm.mResetSignatures) {
++                    Slog.d(TAG, "resetting signatures on package " + parsedPackage.getPackageName());
++                    signatureCheckPs.setSigningDetails(parsedPackage.getSigningDetails());
++                    if (signatureCheckSus != null) {
++                        signatureCheckSus.signatures.mSigningDetails =
++                                parsedPackage.getSigningDetails();
++                    }
++                } else if (ksms.shouldCheckUpgradeKeySetLocked(signatureCheckPs, signatureCheckSus,
+                         scanFlags)) {
+                     if (!ksms.checkUpgradeKeySetLocked(signatureCheckPs, parsedPackage)) {
+                         throw new PrepareFailure(INSTALL_FAILED_UPDATE_INCOMPATIBLE, "Package "
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index fa544ef..4121d55 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -363,6 +363,8 @@
+ 
+     static final boolean HIDE_EPHEMERAL_APIS = false;
+ 
++    private static final boolean RESET_ALL_PACKAGE_SIGNATURES_ON_BOOT = true;
++
+     static final String PRECOMPILE_LAYOUTS = "pm.precompile_layouts";
+ 
+     private static final int RADIO_UID = Process.PHONE_UID;
+@@ -691,6 +693,7 @@
+     final ProtectedPackages mProtectedPackages;
+ 
+     private boolean mFirstBoot;
++    boolean mResetSignatures;
+ 
+     final boolean mIsEngBuild;
+     private final boolean mIsUserDebugBuild;
+@@ -2291,6 +2294,8 @@
+             mShouldStopSystemPackagesByDefault = mContext.getResources()
+                     .getBoolean(R.bool.config_stopSystemPackagesByDefault);
+ 
++            mResetSignatures = RESET_ALL_PACKAGE_SIGNATURES_ON_BOOT;
++
+             final int[] userIds = mUserManager.getUserIds();
+             PackageParser2 packageParser = mInjector.getScanningCachingPackageParser();
+             mOverlayConfig = mInitAppsHelper.initSystemApps(packageParser, packageSettings, userIds,
+@@ -2298,6 +2303,8 @@
+             mInitAppsHelper.initNonSystemApps(packageParser, userIds, startTime);
+             packageParser.close();
+ 
++            mResetSignatures = false;
++
+             mRequiredVerifierPackages = getRequiredButNotReallyRequiredVerifiersLPr(computer);
+             mRequiredInstallerPackage = getRequiredInstallerLPr(computer);
+             mRequiredUninstallerPackage = getRequiredUninstallerLPr(computer);

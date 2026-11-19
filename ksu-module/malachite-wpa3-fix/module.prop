@@ -1,0 +1,6 @@
+id=malachite_wpa3_fix
+name=malachite WPA3 (SAE) association fix
+version=2.0
+versionCode=8
+author=noamtu123
+description=WPA3 fix for malachite. Status: not checked yet. Checks the ROM's own wpa_supplicant and fixes only what is wrong: the WPA3 version bit the Wi-Fi driver rejects (patched in a mounted copy) and pmf=1. Re-checks after ROM updates. Remove the module to restore the original settings.

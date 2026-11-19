@@ -1,0 +1,45 @@
+#!/sbin/sh
+# Recovery zip: adds (or removes, if the zip name contains "remove") one line
+# in the active slot's /product/etc/build.prop:
+#   ro.product.charger.unplugged_shutdown_time=90000
+# The charging screen (health service --charger) then waits 90 s after an
+# unplug before powering off, instead of 10 s, so the ROM's re-arm script
+# (vendor/bin/offmode_charge.sh, armed ~1 min after the charging screen
+# starts) sets power_off_mode=1 first. Verified boot does not check product
+# on this ROM (vbmeta flags 3), and product is ext4.
+OUTFD=$2
+ZIP=$3
+ui() { echo "ui_print $1" > /proc/self/fd/$OUTFD; echo "ui_print" > /proc/self/fd/$OUTFD; }
+fail() { ui "ERROR: $1"; umount /mnt/offmode_product 2>/dev/null; exit 1; }
+
+PROP=ro.product.charger.unplugged_shutdown_time
+LINE="$PROP=90000"
+MODE=add
+case "$(basename "$ZIP")" in *remove*) MODE=remove ;; esac
+
+ui "malachite off-mode charger delay ($MODE)"
+[ "$(getprop ro.product.device)" = malachite ] || [ "$(getprop ro.boot.hardware.platform)" = mt6878 ] || ui "warning: device not detected as malachite, continuing"
+
+slot=$(getprop ro.boot.slot_suffix)
+dev=/dev/block/mapper/product$slot
+[ -e "$dev" ] || fail "$dev not found"
+ui "product partition: $dev"
+blockdev --setrw "$dev" 2>/dev/null
+mkdir -p /mnt/offmode_product
+umount /mnt/offmode_product 2>/dev/null
+mount -t ext4 -o rw "$dev" /mnt/offmode_product || fail "cannot mount product read-write"
+f=/mnt/offmode_product/etc/build.prop
+[ -f "$f" ] || fail "product build.prop not found"
+
+sed -i "/^$PROP=/d" "$f"
+if [ "$MODE" = add ]; then
+  echo "$LINE" >> "$f"
+  grep -q "^$LINE$" "$f" || fail "line not written"
+  ui "Added: $LINE"
+else
+  ui "Removed $PROP (back to 10 s)"
+fi
+sync
+umount /mnt/offmode_product
+ui "Done. Reboot."
+exit 0

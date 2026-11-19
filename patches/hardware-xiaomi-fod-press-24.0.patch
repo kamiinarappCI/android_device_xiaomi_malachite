@@ -1,0 +1,83 @@
+From d28a346f4b5e7443dae115c65451df44244b90b4 Mon Sep 17 00:00:00 2001
+From: Noam <noamtu123@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 00:40:07 +0200
+Subject: [PATCH] fingerprint: finish UDFPS presses on cancellation and
+ operation end
+
+Forward pointer cancellation as a release, and notify the device handler
+when enrollment starts. Close, errors and completed enrollment must also
+end the illumination operation so late touch events cannot relight it.
+---
+ aidl/fingerprint/Session.cpp       | 15 +++++++++++++--
+ fingerprint/include/UdfpsHandler.h |  1 +
+ 2 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/aidl/fingerprint/Session.cpp b/aidl/fingerprint/Session.cpp
+index 7c28e74..e9cdb16 100644
+--- a/aidl/fingerprint/Session.cpp
++++ b/aidl/fingerprint/Session.cpp
+@@ -75,6 +75,8 @@ ndk::ScopedAStatus Session::enroll(const HardwareAuthToken& hat,
+     if (error) {
+         ALOGE("enroll failed: %d", error);
+         mCb->onError(Error::UNABLE_TO_PROCESS, error);
++    } else if (mUdfpsHandler) {
++        mUdfpsHandler->onEnrollmentStarted();
+     }
+ 
+     *out = SharedRefBase::make<CancellationSignal>(this);
+@@ -238,8 +240,8 @@ ndk::ScopedAStatus Session::onContextChanged(const common::OperationContext& con
+     return ndk::ScopedAStatus::ok();
+ }
+ 
+-ndk::ScopedAStatus Session::onPointerCancelWithContext(const PointerContext& /*context*/) {
+-    return ndk::ScopedAStatus::ok();
++ndk::ScopedAStatus Session::onPointerCancelWithContext(const PointerContext& context) {
++    return onPointerUp(context.pointerId);
+ }
+ 
+ ndk::ScopedAStatus Session::setIgnoreDisplayTouches(bool shouldIgnore) {
+@@ -265,6 +267,9 @@ ndk::ScopedAStatus Session::cancel() {
+ }
+ 
+ ndk::ScopedAStatus Session::close() {
++    if (mUdfpsHandler) {
++        mUdfpsHandler->cancel();
++    }
+     mClosed = true;
+     mCb->onSessionClosed();
+     AIBinder_DeathRecipient_delete(mDeathRecipient);
+@@ -388,6 +393,9 @@ void Session::notify(const fingerprint_msg_t* msg) {
+             int32_t vendorCode = 0;
+             Error result = VendorErrorFilter(msg->data.error, &vendorCode);
+             ALOGD("onError(%hhd, %d)", result, vendorCode);
++            if (mUdfpsHandler) {
++                mUdfpsHandler->cancel();
++            }
+             mCb->onError(result, vendorCode);
+         } break;
+         case FINGERPRINT_ACQUIRED: {
+@@ -413,6 +421,9 @@ void Session::notify(const fingerprint_msg_t* msg) {
+             ALOGD("onEnrollResult(fid=%d, rem=%d)", msg->data.enroll.finger.fid,
+                   msg->data.enroll.samples_remaining);
+ #endif
++            if (mUdfpsHandler && msg->data.enroll.samples_remaining == 0) {
++                mUdfpsHandler->cancel();
++            }
+             mCb->onEnrollmentProgress(msg->data.enroll.finger.fid,
+                                       msg->data.enroll.samples_remaining);
+ 
+diff --git a/fingerprint/include/UdfpsHandler.h b/fingerprint/include/UdfpsHandler.h
+index 713a4f4..e4978d6 100644
+--- a/fingerprint/include/UdfpsHandler.h
++++ b/fingerprint/include/UdfpsHandler.h
+@@ -36,6 +36,7 @@ class UdfpsHandler {
+     virtual void onKeyguardOperationChanged(bool /*keyguard*/) {};
+     // An authentication has started (keyguard or app), so FOD should be armed.
+     virtual void onAuthenticationStarted() {};
++    virtual void onEnrollmentStarted() {};
+ };
+ 
+ struct UdfpsHandlerFactory {
+-- 
+2.43.0
+

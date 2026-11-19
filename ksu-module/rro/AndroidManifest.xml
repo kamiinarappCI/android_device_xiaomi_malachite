@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Runtime resource overlay that stops Android from auto-upgrading saved
+     WPA2-PSK networks to WPA3-SAE on malachite (MT6878).
+
+     The shipped wlan_drv_gen4m_6878.ko decodes only nl80211 WPA version bits
+     0x1 and 0x2. Android 16 sends NL80211_WPA_VERSION_3 (0x4) for SAE, which
+     the driver maps to IW_AUTH_WPA_VERSION_DISABLED, discarding the AKM and
+     timing out with ASSOC-REJECT status 16.
+
+     Disabling the auto-upgrade keeps transition-mode access points on PSK, so
+     the supplicant sends 0x2 and association succeeds. This does NOT help on
+     WPA3-only access points, which have no PSK to fall back to.
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.android.wifi.resources.malachite.saefix"
+          android:versionCode="1"
+          android:versionName="1.0">
+    <application android:hasCode="false" />
+    <overlay android:targetPackage="com.android.wifi.resources"
+             android:targetName="WifiCustomization"
+             android:isStatic="true"
+             android:priority="10" />
+</manifest>

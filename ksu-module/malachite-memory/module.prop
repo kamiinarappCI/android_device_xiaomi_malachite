@@ -1,0 +1,6 @@
+id=malachite_memory
+name=malachite memory: keep more apps in the background
+version=1.0
+versionCode=1
+author=noamtu123
+description=Sets the low memory killer's swap threshold to stock Xiaomi's value (ro.lmk.swap_free_low_percentage=20 instead of the Pixel policy's 100), so background apps are compressed into zram before being closed. Remove the module to restore the ROM's value.

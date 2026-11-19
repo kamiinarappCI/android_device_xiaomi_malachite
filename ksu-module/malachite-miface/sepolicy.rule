@@ -1,0 +1,53 @@
+type_transition su hal_face_default_exec process hal_face_default
+allow su hal_face_default_exec file { read open getattr map execute }
+allow su hal_face_default process { transition siginh rlimitinh noatsecure signal sigkill getattr }
+allow hal_face_default hal_face_default_exec file { read open getattr map execute entrypoint }
+allow hal_face_default su fd use
+allow hal_face_default su process sigchld
+allow hal_face_default su fifo_file { read write getattr }
+allow hal_face_default fwk_camera_service service_manager find
+allow hal_face_default cameraserver binder { call transfer }
+allow cameraserver hal_face_default binder { call transfer }
+allow hal_face_default cameraserver fd use
+allow cameraserver hal_face_default fd use
+allow cameraserver hal_face_default dir search
+allow cameraserver hal_face_default file { read open getattr map }
+allow hal_face_default camera_config_prop file { read open getattr map }
+allow hal_face_default hwbinder_device chr_file { read write open ioctl getattr map }
+allow hal_face_default hwservicemanager binder { call transfer }
+allow hwservicemanager hal_face_default binder { call transfer }
+allow hal_face_default hwservicemanager fd use
+allow hwservicemanager hal_face_default fd use
+allow hwservicemanager hal_face_default dir search
+allow hwservicemanager hal_face_default file { read open map }
+allow hwservicemanager hal_face_default process getattr
+allow hal_face_default hwservicemanager_prop file { read open getattr map }
+allow hal_face_default hidl_token_hwservice hwservice_manager find
+allow hal_face_default hal_graphics_mapper_hwservice hwservice_manager find
+allow hal_face_default fwk_sensor_hwservice hwservice_manager find
+allow hal_face_default fwk_camera_hwservice hwservice_manager find
+allow hal_face_default hal_graphics_allocator_service service_manager find
+allow hal_face_default hal_graphics_allocator_default binder { call transfer }
+allow hal_graphics_allocator_default hal_face_default binder { call transfer }
+allow hal_face_default hal_graphics_allocator_default fd use
+allow hal_graphics_allocator_default hal_face_default fd use
+allow hal_face_default hal_graphics_allocator_default_tmpfs file { read write getattr map open }
+allow hal_face_default dmabuf_system_heap_device chr_file { read open getattr ioctl map }
+allow hal_face_default mitee_client_device chr_file { read write open ioctl getattr map }
+allow hal_face_default tee_device chr_file { read write open ioctl getattr map }
+allow hal_face_default face_vendor_data_file dir { create read write open getattr setattr search add_name remove_name rmdir rename }
+allow hal_face_default face_vendor_data_file file { create read write open getattr setattr append map unlink rename lock ioctl }
+allow hal_face_default default_android_service service_manager add
+allow hal_face_default vendor_default_prop property_service set
+allow hal_face_default property_socket sock_file write
+allow hal_face_default init unix_stream_socket connectto
+allow hal_face_default proc_perfmgr dir { search read open getattr }
+allow hal_face_default proc_perfmgr file { read open getattr ioctl }
+allowxperm hal_face_default proc_perfmgr file ioctl 0x6700-0x6710
+allowxperm hal_face_default proc_perfmgr file ioctl 0x6764-0x676b
+allowxperm hal_face_default proc_perfmgr file ioctl 0x67c8
+allow hal_face_default proc_ged file { read write open getattr ioctl }
+allowxperm hal_face_default proc_ged file ioctl 0x6700-0x6710
+allowxperm hal_face_default proc_ged file ioctl 0x6764-0x676b
+allowxperm hal_face_default proc_ged file ioctl 0x67c8
+allow hal_face_default sysfs file { read open getattr }

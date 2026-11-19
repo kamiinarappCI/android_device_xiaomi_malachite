@@ -1,0 +1,6 @@
+# Scripts and module files run on Android; keep LF in every checkout.
+*.sh text eol=lf
+*.rule text eol=lf
+*.prop text eol=lf
+ksu-module/**/*.json text eol=lf
+*.patch text eol=lf

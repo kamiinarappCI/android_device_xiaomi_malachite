@@ -1,0 +1,7 @@
+(type charger_block_device)
+(roletype object_r charger_block_device)
+(typeattributeset dev_type (charger_block_device))
+(allow vendor_offmode_charge block_device (dir (getattr search)))
+(allow vendor_offmode_charge block_device (lnk_file (getattr read)))
+(allow vendor_offmode_charge charger_block_device (blk_file (getattr open read write)))
+(allow vendor_offmode_charge kmsg_device (chr_file (getattr open write append)))

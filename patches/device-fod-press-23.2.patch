@@ -1,0 +1,255 @@
+From faf2edeac6da33de8102de45af476fa479468563 Mon Sep 17 00:00:00 2001
+From: Noam <noamtu123@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 00:41:19 +0200
+Subject: [PATCH] malachite: udfps: handle framework presses alongside touch
+ events
+
+App prompts receive framework pointer events without a corresponding
+fod_press_status edge. Arming Touch_Fod_Enable alone never requests HBM
+or notifies the fingerprint sensor in that case.
+
+Merge both event sources into one press state. Keep the touch detector
+armed after pointer-up, deduplicate HBM and sensor notifications, and
+clear both sources when the operation stops or display touches are
+suppressed. Drain HAL notifications outside the state lock because
+extCmd can synchronously deliver acquired callbacks.
+
+Require a live authentication or enrollment before accepting presses or
+vendor waiting notifications. Report ioctl failures instead of assuming
+the panel or touch controller accepted the request.
+---
+ udfps/UdfpsHandler.cpp | 147 +++++++++++++++++++++++++++++------------
+ 1 file changed, 106 insertions(+), 41 deletions(-)
+
+diff --git a/udfps/UdfpsHandler.cpp b/udfps/UdfpsHandler.cpp
+index b95c34f..ccfd395 100644
+--- a/udfps/UdfpsHandler.cpp
++++ b/udfps/UdfpsHandler.cpp
+@@ -114,6 +114,8 @@ class XiaomiMalachiteUdfpsHandler : public UdfpsHandler {
+                     .revents = 0,
+             };
+ 
++            // Acknowledge the initial sysfs state before waiting for a new edge.
++            readBool(fd);
+             while (true) {
+                 int rc = poll(&fodPressStatusPoll, 1, -1);
+                 if (rc < 0) {
+@@ -122,20 +124,12 @@ class XiaomiMalachiteUdfpsHandler : public UdfpsHandler {
+                 }
+                 bool pressed = readBool(fd);
+ 
+-                {
+-                    std::lock_guard<std::mutex> lock(fodLock_);
+-                    // The touch driver can still report a press after FOD was switched off,
+-                    // e.g. a finger sliding over the sensor right after a successful match.
+-                    // Its release is then never reported, so the white spot would stay lit
+-                    // until the screen turns off. Only act on presses while FOD is armed.
+-                    if (pressed && !fodEnabled_) {
+-                        continue;
+-                    }
+-                    setLocalHbm(pressed);
++                std::unique_lock<std::mutex> lock(fodLock_);
++                if (pressed && !fodEnabled_) {
++                    continue;
+                 }
+-                // Outside the lock: the HAL may call back into onAcquired().
+-                mDevice->extCmd(mDevice, COMMAND_FOD_PRESS_STATUS,
+-                                pressed ? PARAM_FOD_PRESSED : PARAM_FOD_RELEASED);
++                driverPressed_ = pressed;
++                updatePressLocked(lock);
+             }
+         }).detach();
+ 
+@@ -195,23 +189,28 @@ class XiaomiMalachiteUdfpsHandler : public UdfpsHandler {
+     void onFingerDown(uint32_t x, uint32_t y, float /*minor*/, float /*major*/) {
+         LOG(DEBUG) << __func__ << "x: " << x << ", y: " << y;
+ 
+-        /*
+-         * On fpc_fod devices, the waiting for finger message is not reliably sent...
+-         * The finger down message is only reliably sent when the screen is turned off, so enable
+-         * fod_status better late than never.
+-         */
++        std::unique_lock<std::mutex> lock(fodLock_);
++        if (!operationActive_) {
++            return;
++        }
++        // FPC does not reliably send its waiting-for-finger notification.
+         if (isFpcFod) {
+-            setFodStatus(FOD_STATUS_ON);
++            fodRequested_ = true;
++            applyTouchFodLocked(lock);
+         }
+-
+-        // Ensure touchscreen is aware of the press state, ideally this is not needed
+-        setFingerDown(true);
++        if (!fodEnabled_) {
++            return;
++        }
++        frameworkPressed_ = true;
++        updatePressLocked(lock);
+     }
+ 
+     void onFingerUp() {
+         LOG(DEBUG) << __func__;
+-        // Ensure touchscreen is aware of the press state, ideally this is not needed
+-        setFingerDown(false);
++        std::unique_lock<std::mutex> lock(fodLock_);
++        frameworkPressed_ = false;
++        driverPressed_ = false;
++        updatePressLocked(lock);
+     }
+ 
+     void onAcquired(int32_t result, int32_t vendorCode) {
+@@ -246,30 +245,39 @@ class XiaomiMalachiteUdfpsHandler : public UdfpsHandler {
+         }
+     }
+ 
++    void onAuthenticationStarted() { startOperation(); }
++
++    void onEnrollmentStarted() { startOperation(); }
++
++    void onAuthenticationSucceeded() { cancel(); }
++
+     void cancel() {
+-        LOG(DEBUG) << __func__;
+-        setFodStatus(FOD_STATUS_OFF);
++        LOG(INFO) << __func__;
++        std::unique_lock<std::mutex> lock(fodLock_);
++        operationActive_ = false;
++        fodRequested_ = false;
++        applyTouchFodLocked(lock);
+     }
+ 
+     void setIgnoreDisplayTouches(bool ignore) {
+         LOG(DEBUG) << __func__ << " ignore: " << ignore;
+-        std::lock_guard<std::mutex> lock(fodLock_);
++        std::unique_lock<std::mutex> lock(fodLock_);
+         ignoreTouches_ = ignore;
+-        applyTouchFodLocked();
++        applyTouchFodLocked(lock);
+     }
+ 
+     void onDisplayOffChanged(bool off) {
+         LOG(DEBUG) << __func__ << " off: " << off;
+-        std::lock_guard<std::mutex> lock(fodLock_);
++        std::unique_lock<std::mutex> lock(fodLock_);
+         displayOff_ = off;
+-        applyTouchFodLocked();
++        applyTouchFodLocked(lock);
+     }
+ 
+     void onKeyguardOperationChanged(bool keyguard) {
+         LOG(DEBUG) << __func__ << " keyguard: " << keyguard;
+-        std::lock_guard<std::mutex> lock(fodLock_);
++        std::unique_lock<std::mutex> lock(fodLock_);
+         keyguardOp_ = keyguard;
+-        applyTouchFodLocked();
++        applyTouchFodLocked(lock);
+     }
+ 
+   private:
+@@ -296,35 +304,92 @@ class XiaomiMalachiteUdfpsHandler : public UdfpsHandler {
+     // "ignore" on removal can arrive after BiometricPrompt's overlay asked for
+     // touches, which left FOD off in apps. Only the keyguard needs ignoring.
+     bool keyguardOp_ = false;
++    bool operationActive_ = false;
++    bool frameworkPressed_ = false;
++    bool driverPressed_ = false;
++    bool pressed_ = false;
++    bool notifiedPressed_ = false;
++    bool notifyingPress_ = false;
+ 
+     void setLocalHbm(bool on) {
+-        disp_local_hbm_req req;
++        disp_local_hbm_req req = {};
+         req.base.flag = 0;
+         req.base.disp_id = MI_DISP_PRIMARY;
+         req.local_hbm_value =
+                 on ? LHBM_TARGET_BRIGHTNESS_WHITE_1000NIT : LHBM_TARGET_BRIGHTNESS_OFF_FINGER_UP;
+-        ioctl(disp_fd_.get(), MI_DISP_IOCTL_SET_LOCAL_HBM, &req);
++        if (ioctl(disp_fd_.get(), MI_DISP_IOCTL_SET_LOCAL_HBM, &req) < 0) {
++            PLOG(ERROR) << "local HBM request failed, on: " << on;
++        }
+     }
+ 
+-    void applyTouchFodLocked() {
+-        bool on = fodRequested_ && (!(ignoreTouches_ && keyguardOp_) || displayOff_);
++    void applyTouchFodLocked(std::unique_lock<std::mutex>& lock) {
++        bool on = operationActive_ && fodRequested_ &&
++                  (!(ignoreTouches_ && keyguardOp_) || displayOff_);
+         fodEnabled_ = on;
+         if (!on) {
+-            setLocalHbm(false);
++            frameworkPressed_ = false;
++            driverPressed_ = false;
++            // Also clear illumination left behind by an earlier HAL instance.
++            if (!pressed_) {
++                setLocalHbm(false);
++            }
+         }
+         int buf[MAX_BUF_SIZE] = {TOUCH_ID, Touch_Fod_Enable, on ? 1 : 0};
+-        ioctl(touch_fd_.get(), TOUCH_IOC_SET_CUR_VALUE, &buf);
++        if (ioctl(touch_fd_.get(), TOUCH_IOC_SET_CUR_VALUE, &buf) < 0) {
++            PLOG(ERROR) << "touch FOD request failed, on: " << on;
++        }
++        updatePressLocked(lock);
+     }
+ 
+     void setTouchFod(bool on) {
+-        std::lock_guard<std::mutex> lock(fodLock_);
++        std::unique_lock<std::mutex> lock(fodLock_);
++        if (on && !operationActive_) {
++            return;
++        }
+         fodRequested_ = on;
+-        applyTouchFodLocked();
++        applyTouchFodLocked(lock);
+     }
+ 
+     void setFodStatus(int value) { setTouchFod(value == FOD_STATUS_ON); }
+ 
+-    void setFingerDown(bool pressed) { setTouchFod(pressed); }
++    void startOperation() {
++        LOG(INFO) << __func__;
++        std::unique_lock<std::mutex> lock(fodLock_);
++        frameworkPressed_ = false;
++        driverPressed_ = false;
++        operationActive_ = true;
++        fodRequested_ = true;
++        applyTouchFodLocked(lock);
++    }
++
++    void updatePressLocked(std::unique_lock<std::mutex>& lock) {
++        bool pressed = fodEnabled_ && (frameworkPressed_ || driverPressed_);
++        if (pressed_ != pressed) {
++            pressed_ = pressed;
++            LOG(INFO) << "FOD press: " << pressed << ", framework: " << frameworkPressed_
++                      << ", driver: " << driverPressed_;
++            setLocalHbm(pressed);
++        }
++
++        // extCmd can synchronously call onAcquired. Keep one dispatcher and
++        // drain state changes after it returns, without holding fodLock_.
++        if (notifyingPress_) {
++            return;
++        }
++        notifyingPress_ = true;
++        while (notifiedPressed_ != pressed_) {
++            bool notifyPressed = pressed_;
++            notifiedPressed_ = notifyPressed;
++            lock.unlock();
++            int rc = mDevice->extCmd(mDevice, COMMAND_FOD_PRESS_STATUS,
++                                    notifyPressed ? PARAM_FOD_PRESSED : PARAM_FOD_RELEASED);
++            if (rc < 0) {
++                LOG(ERROR) << "FOD press notification failed: " << rc;
++            }
++            lock.lock();
++        }
++        notifyingPress_ = false;
++    }
+ };
+ 
+ static UdfpsHandler* create() {
+-- 
+2.43.0
+

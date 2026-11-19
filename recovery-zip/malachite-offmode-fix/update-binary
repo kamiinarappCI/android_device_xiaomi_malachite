@@ -1,0 +1,151 @@
+#!/sbin/sh
+# Off-mode charging test fix for build 23.2-20261009 (malachite).
+#
+# The file "mode" inside the zip says what to do:
+#   install: vendor_boot  -> 20261009's with mtk_charger_framework.ko patched so
+#                            the kernel no longer resets power_off_mode ~58 s
+#                            after boot (set_charger_partition_info_1 returns 0);
+#            /product     -> bin/malachite_offmode_flag.sh, etc/init/
+#                            malachite_offmode_flag.rc, and the permission for it
+#                            in etc/selinux (the phone builds the policy at boot).
+#   remove:  puts 20261009's original vendor_boot and /product files back.
+# Only the active slot is changed. Nothing is written unless every check passes;
+# a failed step puts back what was changed before it.
+OUTFD=$2
+ZIP=$3
+
+ORIG_VB=06e1f6477e4e56e209b0b1a753c069a6c566f98089bccf423ff931dd62574986
+FIX_VB=@FIX_VB@
+ORIG_POL=75a11da44c802486bc6f65640aa48a730f0f684c5c07a42ba3cd1735eb3fb070
+FIX_POL=@FIX_POL@
+BUILD_UTC=1791537836
+
+MNT=/mnt/malachite_offmode_product
+TMP=/tmp/malachite_offmode
+SCRIPT=bin/malachite_offmode_flag.sh
+RC=etc/init/malachite_offmode_flag.rc
+SEL=etc/selinux
+
+ui() { echo "ui_print $1" > /proc/self/fd/$OUTFD; echo "ui_print" > /proc/self/fd/$OUTFD; }
+cleanup() { umount "$MNT" 2>/dev/null; rm -rf "$TMP"; }
+fail() { ui "ERROR: $1"; ui "Nothing is left half-done; see the lines above."; cleanup; exit 1; }
+sha() { sha256sum "$1" | cut -d' ' -f1; }
+extract() { unzip -p "$ZIP" "$1" > "$2" && [ -s "$2" -o "$3" = empty ]; }
+
+MODE=$(unzip -p "$ZIP" mode 2>/dev/null)
+case "$MODE" in install|remove) ;; *) ui "ERROR: zip has no valid mode file"; exit 1 ;; esac
+ui "malachite off-mode charging fix: $MODE"
+
+case "$(getprop ro.product.device)$(getprop ro.boot.hardware.platform)" in
+  *malachite*|*mt6878*) ;;
+  *) ui "ERROR: this is not a malachite"; exit 1 ;;
+esac
+
+slot=$(getprop ro.boot.slot_suffix)
+VB=/dev/block/by-name/vendor_boot$slot
+PD=/dev/block/mapper/product$slot
+[ -n "$slot" ] || { ui "ERROR: no active slot reported"; exit 1; }
+[ -b "$VB" ] || { ui "ERROR: $VB not found"; exit 1; }
+[ -e "$PD" ] || { ui "ERROR: $PD not found"; exit 1; }
+ui "Active slot: $slot"
+
+rm -rf "$TMP"; mkdir -p "$TMP"
+
+# ---- checks (read only) ----
+cur_vb=$(sha "$VB")
+case "$cur_vb" in
+  "$ORIG_VB") vb_state=orig ;;
+  "$FIX_VB") vb_state=fix ;;
+  *) vb_state=other ;;
+esac
+
+for m in $(grep "^$PD " /proc/mounts | cut -d' ' -f2); do umount "$m"; done
+blockdev --setrw "$PD" 2>/dev/null
+mkdir -p "$MNT"
+mount -t ext4 -o rw "$PD" "$MNT" || fail "cannot mount product read-write"
+grep -q "^ro.product.build.date.utc=$BUILD_UTC$" "$MNT/etc/build.prop" ||
+  fail "this phone is not on build 20261009 (product). Flash 20261009 first, or the matching zip for your build."
+cur_pol=$(head -n 1 "$MNT/$SEL/product_sepolicy_and_mapping.sha256")
+case "$cur_pol" in
+  "$ORIG_POL") pol_state=orig ;;
+  "$FIX_POL") pol_state=fix ;;
+  *) fail "unexpected product policy ($cur_pol); not touching it" ;;
+esac
+[ "$vb_state" = other ] && fail "vendor_boot is not build 20261009's (or this fix's); not touching it"
+ui "Checks passed (vendor_boot: $vb_state, product: $pol_state)"
+
+# ---- vendor_boot ----
+write_vb() { # $1 = image, $2 = expected sha
+  dd if="$1" of="$VB" bs=1048576 2>/dev/null; sync
+  [ "$(sha "$VB")" = "$2" ]
+}
+want_vb=$([ "$MODE" = install ] && echo fix || echo orig)
+if [ "$vb_state" != "$want_vb" ]; then
+  extract vendor_boot.img "$TMP/new_vb.img" || fail "cannot unpack vendor_boot.img from the zip"
+  want_sha=$([ "$MODE" = install ] && echo "$FIX_VB" || echo "$ORIG_VB")
+  [ "$(sha "$TMP/new_vb.img")" = "$want_sha" ] || fail "vendor_boot.img in the zip is damaged; download the zip again"
+  dd if="$VB" of="$TMP/old_vb.img" bs=1048576 2>/dev/null
+  [ "$(sha "$TMP/old_vb.img")" = "$cur_vb" ] || fail "could not back up vendor_boot"
+  if ! write_vb "$TMP/new_vb.img" "$want_sha"; then
+    write_vb "$TMP/old_vb.img" "$cur_vb" || { ui "ERROR: vendor_boot write failed and could not be put back."; ui "Do NOT reboot. In fastboot: fastboot flash vendor_boot$slot vendor_boot.img (from the remove zip)"; cleanup; exit 1; }
+    fail "vendor_boot write failed; the original is back"
+  fi
+  ui "vendor_boot: $want_vb image written and verified"
+else
+  ui "vendor_boot: already $want_vb"
+fi
+undo_vb() { [ -f "$TMP/old_vb.img" ] && write_vb "$TMP/old_vb.img" "$cur_vb" && ui "vendor_boot put back"; }
+
+# ---- /product ----
+for f in product_sepolicy.cil product_file_contexts product_sepolicy_and_mapping.sha256; do
+  cp -p "$MNT/$SEL/$f" "$TMP/backup_$f"
+done
+for f in "$SCRIPT" "$RC"; do
+  [ -e "$MNT/$f" ] && cp -p "$MNT/$f" "$TMP/backup_$(basename "$f")"
+done
+restore_product() {
+  rm -f "$MNT/$SCRIPT" "$MNT/$RC"
+  b="$TMP/backup_$(basename "$SCRIPT")"
+  [ -e "$b" ] && cp -p "$b" "$MNT/$SCRIPT" && chcon u:object_r:vendor_offmode_charge_exec:s0 "$MNT/$SCRIPT"
+  b="$TMP/backup_$(basename "$RC")"
+  [ -e "$b" ] && cp -p "$b" "$MNT/$RC" && chcon u:object_r:system_file:s0 "$MNT/$RC"
+  for f in product_sepolicy.cil product_file_contexts product_sepolicy_and_mapping.sha256; do
+    cat "$TMP/backup_$f" > "$MNT/$SEL/$f"
+  done
+  sync
+}
+product_fail() { restore_product; undo_vb; fail "$1; everything put back"; }
+
+if [ "$MODE" = install ]; then
+  extract files/malachite_offmode_flag.sh "$MNT/$SCRIPT" || product_fail "cannot write $SCRIPT"
+  chown 0:2000 "$MNT/$SCRIPT"; chmod 0755 "$MNT/$SCRIPT"
+  chcon u:object_r:vendor_offmode_charge_exec:s0 "$MNT/$SCRIPT" || product_fail "cannot label $SCRIPT"
+  extract files/malachite_offmode_flag.rc "$MNT/$RC" || product_fail "cannot write $RC"
+  chown 0:0 "$MNT/$RC"; chmod 0644 "$MNT/$RC"
+  chcon u:object_r:system_file:s0 "$MNT/$RC" || product_fail "cannot label $RC"
+  SRC=files
+else
+  rm -f "$MNT/$SCRIPT" "$MNT/$RC"
+  SRC=orig
+fi
+for f in product_sepolicy.cil product_file_contexts product_sepolicy_and_mapping.sha256; do
+  extract "$SRC/$f" "$TMP/$f" empty && cat "$TMP/$f" > "$MNT/$SEL/$f" || product_fail "cannot write $SEL/$f"
+done
+sync
+
+# ---- verify /product ----
+for f in product_sepolicy.cil product_file_contexts product_sepolicy_and_mapping.sha256; do
+  cmp -s "$TMP/$f" "$MNT/$SEL/$f" || product_fail "$SEL/$f did not verify"
+done
+if [ "$MODE" = install ]; then
+  ls -Z "$MNT/$SCRIPT" | grep -q vendor_offmode_charge_exec || product_fail "$SCRIPT label did not verify"
+  ls -Z "$MNT/$RC" | grep -q system_file || product_fail "$RC label did not verify"
+  ui "product: script, startup file and permission installed"
+else
+  [ ! -e "$MNT/$SCRIPT" ] && [ ! -e "$MNT/$RC" ] || product_fail "could not delete the fix files"
+  ui "product: original files back"
+fi
+
+cleanup
+ui "Done. Reboot."
+exit 0

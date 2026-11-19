@@ -1,0 +1,6 @@
+id=malachite_performance
+name=malachite performance: MediaTek governor, cache QoS and ADPF
+version=1.0
+versionCode=1
+author=noamtu123
+description=Runs the CPU the way stock HyperOS does on this chip: MediaTek's sugov_ext frequency governor, L3 cache partitioning for the foreground app (cpuqos), and Android's per-frame CPU hints (ADPF) for apps and games. Use the Action button to switch the governor back to schedutil for comparison. Remove the module to restore the ROM's behaviour.
