@@ -34,9 +34,8 @@ PRODUCT_GMS_CLIENTID_BASE := android-xiaomi
 # Set maintainer
 MISTOS_MAINTAINER := kamiinarappCI
 
-# Enable GMS with mini package
-WITH_GMS := true
-TARGET_USES_MINI_GAPPS := true
+# Enable GMS
+WITH_GMS := false
 
 # Enable UI enhancements
 TARGET_ENABLE_BLUR := true
